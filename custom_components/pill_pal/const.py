@@ -66,3 +66,13 @@ NOTIFY_PATTERNS = ["flash", "pulse", "sweep", "rainbow"]
 STATUS_PATTERNS = ["solid", "pulse"]
 PRIORITIES = ["low", "normal", "high"]
 GESTURES = ["tap", "double_tap", "long_press"]
+
+# Countdown (indicators.md, "start_countdown"). A lamp runs it only when its snapshot
+# states capabilities.countdown.
+CAPABILITY_COUNTDOWN = "countdown"
+COUNTDOWN_MIN_SECONDS = 10
+COUNTDOWN_MAX_SECONDS = 43_200
+COUNTDOWN_END_STYLES = ["brief", "until_tapped"]
+COUNTDOWN_END_REASONS = ["finished", "dismissed", "cancelled", "replaced", "ended_by_restart"]
+# What set_by says for a countdown started from the lamp's own pads (owner 0).
+LAMP_OWNER_LABEL = "Lamp"

@@ -39,6 +39,8 @@ blueprint:
               value: status
             - label: A reminder
               value: reminder
+            - label: A countdown
+              value: countdown
             - label: A pattern
               value: notify
     actions:

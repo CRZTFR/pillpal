@@ -85,14 +85,26 @@
           "snoozed": "Snoozed"
         }
       },
-      "wifi_signal": { "name": "Wi-Fi signal" }
+      "wifi_signal": { "name": "Wi-Fi signal" },
+      "countdown_ends": { "name": "Countdown ends" },
+      "last_countdown": {
+        "name": "Last countdown",
+        "state": {
+          "finished": "Finished",
+          "dismissed": "Dismissed",
+          "cancelled": "Cancelled",
+          "replaced": "Replaced",
+          "ended_by_restart": "Ended by a restart"
+        }
+      }
     }
   },
   "exceptions": {
     "unknown_device": { "message": "That device is not a connected Pill Pal." },
     "refused": { "message": "The lamp refused the command: {outcome}." },
     "not_authorised": { "message": "The lamp no longer accepts Home Assistant. Reconnect it from the integration page." },
-    "unreachable": { "message": "Could not reach the lamp." }
+    "unreachable": { "message": "Could not reach the lamp." },
+    "no_countdown": { "message": "This lamp has no countdown. It needs firmware that includes the countdown." }
   },
   "selector": {
     "notify_pattern": {
@@ -103,6 +115,9 @@
     },
     "priority": {
       "options": { "low": "Low", "normal": "Normal", "high": "High" }
+    },
+    "countdown_end_style": {
+      "options": { "brief": "Brief", "until_tapped": "Until tapped" }
     }
   },
   "services": {
@@ -152,6 +167,25 @@
     "clear_gauge": {
       "name": "Clear gauge",
       "description": "Remove the gauge. The lamp goes back to its ambient scene.",
+      "fields": {
+        "device_id": { "name": "Lamp", "description": "The Pill Pal to use." }
+      }
+    },
+    "start_countdown": {
+      "name": "Start countdown",
+      "description": "Drain the lamp over a set time, then play a pattern. Replaces a countdown that is already running, whoever started it.",
+      "fields": {
+        "device_id": { "name": "Lamp", "description": "The Pill Pal to use." },
+        "duration": { "name": "Duration", "description": "10 seconds to 12 hours." },
+        "color": { "name": "Colour", "description": "The colour it drains in, and of the pattern at the end." },
+        "end_style": { "name": "End", "description": "Brief plays the pattern for 10 seconds. Until tapped keeps the lamp lit until someone touches it." },
+        "end_pattern": { "name": "End pattern", "description": "The pattern at the end. Rainbow ignores the colour." },
+        "calm": { "name": "Calm", "description": "Turns off the step up in brightness and motion near the end." }
+      }
+    },
+    "cancel_countdown": {
+      "name": "Cancel countdown",
+      "description": "Stop the countdown, whoever started it, whether it is running, paused or finished.",
       "fields": {
         "device_id": { "name": "Lamp", "description": "The Pill Pal to use." }
       }

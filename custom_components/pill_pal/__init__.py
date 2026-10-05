@@ -2,12 +2,14 @@
 
 One config entry per lamp. Each owns a signed client, a coordinator holding the lamp's
 reported state, and the event stream. Home Assistant creates no reminders: it controls
-the ambient light, drives the indicators (notify, status, gauge), acknowledges or
-snoozes a reminder by id, and hears touches (development plan, 28 September 2026).
+the ambient light, drives the indicators (notify, status, gauge, and the countdown on a
+lamp that states it), acknowledges or snoozes a reminder by id, and hears touches
+(development plan, 28 September 2026).
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any
 
 import voluptuous as vol
@@ -24,10 +26,14 @@ from homeassistant.helpers.typing import ConfigType
 
 from .api import PillPalAuthError, PillPalClient, PillPalCommandError, PillPalError
 from .const import (
+    CAPABILITY_COUNTDOWN,
     CONF_DEVICE_ID,
     CONF_GENERATION,
     CONF_GRANT_ID,
     CONF_GRANT_KEY,
+    COUNTDOWN_END_STYLES,
+    COUNTDOWN_MAX_SECONDS,
+    COUNTDOWN_MIN_SECONDS,
     DEFAULT_PORT,
     DOMAIN,
     NOTIFY_PATTERNS,
@@ -90,6 +96,26 @@ def _hex(rgb: list[int]) -> str:
 RGB = vol.All(vol.ExactSequence((cv.byte, cv.byte, cv.byte)), vol.Coerce(list))
 STATUS_ID = vol.All(cv.string, vol.Match(r"^[A-Za-z0-9_.-]{1,23}$"))
 
+
+def _countdown_seconds(value: Any) -> int:
+    """Seconds, "HH:MM:SS" or a duration selector's dict, as the whole seconds the lamp takes."""
+    period: timedelta = cv.time_period(value)
+    seconds = period.total_seconds()
+    if seconds != int(seconds):
+        raise vol.Invalid("a countdown is a whole number of seconds")
+    if not COUNTDOWN_MIN_SECONDS <= seconds <= COUNTDOWN_MAX_SECONDS:
+        raise vol.Invalid(
+            f"a countdown is {COUNTDOWN_MIN_SECONDS} seconds to 12 hours, not {seconds:g} seconds"
+        )
+    return int(seconds)
+
+
+# Actions the lamp runs only when its snapshot states the capability.
+NEEDS_CAPABILITY = {
+    "start_countdown": CAPABILITY_COUNTDOWN,
+    "cancel_countdown": CAPABILITY_COUNTDOWN,
+}
+
 SCHEMAS: dict[str, vol.Schema] = {
     "notify": vol.Schema(
         {
@@ -126,6 +152,17 @@ SCHEMAS: dict[str, vol.Schema] = {
         }
     ),
     "clear_gauge": vol.Schema({vol.Required(ATTR_DEVICE_ID): cv.string}),
+    "start_countdown": vol.Schema(
+        {
+            vol.Required(ATTR_DEVICE_ID): cv.string,
+            vol.Required("duration"): _countdown_seconds,
+            vol.Required("color"): RGB,
+            vol.Optional("end_style", default="brief"): vol.In(COUNTDOWN_END_STYLES),
+            vol.Optional("end_pattern", default="pulse"): vol.In(NOTIFY_PATTERNS),
+            vol.Optional("calm", default=False): cv.boolean,
+        }
+    ),
+    "cancel_countdown": vol.Schema({vol.Required(ATTR_DEVICE_ID): cv.string}),
     "acknowledge": vol.Schema(
         {vol.Required(ATTR_DEVICE_ID): cv.string, vol.Required("occurrence_id"): cv.positive_int}
     ),
@@ -168,6 +205,16 @@ def _payload(service: str, data: dict[str, Any]) -> tuple[str, dict[str, Any] | 
         return "set_gauge", payload
     if service == "clear_gauge":
         return "clear_gauge", None
+    if service == "start_countdown":
+        # The canonical form, defaults written out, so the lamp stores what was sent.
+        return "start_countdown", {
+            "durationSeconds": data["duration"],
+            "colour": _hex(data["color"]),
+            "end": {"style": data["end_style"], "pattern": data["end_pattern"]},
+            "calm": data["calm"],
+        }
+    if service == "cancel_countdown":
+        return "cancel_countdown", None
     return service, {"occurrenceId": data["occurrence_id"]}
 
 
@@ -186,10 +233,20 @@ def _entry_for_device(hass: HomeAssistant, device_id: str) -> PillPalConfigEntry
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async def handle(call: ServiceCall) -> None:
         entry = _entry_for_device(hass, call.data[ATTR_DEVICE_ID])
+        capability = NEEDS_CAPABILITY.get(call.service)
+        if capability is not None and not entry.runtime_data.coordinator.supports(capability):
+            raise HomeAssistantError(
+                translation_domain=DOMAIN, translation_key=f"no_{capability}"
+            )
         operation, payload = _payload(call.service, dict(call.data))
         try:
             await entry.runtime_data.client.command(operation, payload)
         except PillPalCommandError as err:
+            if capability is not None and err.outcome == "not_supported":
+                # The snapshot said yes, the lamp says no: firmware changed under us.
+                raise HomeAssistantError(
+                    translation_domain=DOMAIN, translation_key=f"no_{capability}"
+                ) from err
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="refused",

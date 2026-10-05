@@ -1,0 +1,82 @@
+blueprint:
+  name: Pill Pal - start a countdown
+  description: >-
+    Starts a countdown on the lamp when a trigger fires. Out of the box it starts 25
+    minutes at 08:20 on weekdays, so the lamp drains until it is time to leave for
+    school. Change the trigger and the conditions to suit, for example to use a Workday
+    sensor so school holidays are skipped. A countdown already running is replaced.
+    The lamp needs firmware that includes the countdown.
+  domain: automation
+  source_url: https://github.com/CRZTFR/pillpal-hacs/blob/main/blueprints/automation/pill_pal/countdown_when.yaml
+  input:
+    lamp:
+      name: Lamp
+      selector:
+        device:
+          integration: pill_pal
+    start:
+      name: Start when
+      default:
+        - trigger: time
+          at: "08:20:00"
+      selector:
+        trigger: {}
+    only_if:
+      name: Only if
+      description: Leave empty to start every time the trigger fires.
+      default:
+        - condition: time
+          weekday: [mon, tue, wed, thu, fri]
+      selector:
+        condition: {}
+    duration:
+      name: How long
+      default:
+        hours: 0
+        minutes: 25
+        seconds: 0
+      selector:
+        duration: {}
+    color:
+      name: Colour
+      default: [255, 179, 71]
+      selector:
+        color_rgb: {}
+    end_style:
+      name: At the end
+      default: brief
+      selector:
+        select:
+          options:
+            - label: Play the pattern for 10 seconds
+              value: brief
+            - label: Stay lit until someone touches the lamp
+              value: until_tapped
+    end_pattern:
+      name: End pattern
+      default: pulse
+      selector:
+        select:
+          options: [flash, pulse, sweep, rainbow]
+    calm:
+      name: Calm
+      description: Turns off the step up in brightness and motion near the end.
+      default: false
+      selector:
+        boolean: {}
+
+mode: single
+
+triggers: !input start
+
+conditions: !input only_if
+
+actions:
+  - action: pill_pal.start_countdown
+    data:
+      device_id: !input lamp
+      duration: !input duration
+      color: !input color
+      end_style: !input end_style
+      end_pattern: !input end_pattern
+      calm: !input calm

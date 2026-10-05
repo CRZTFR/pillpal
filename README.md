@@ -2,7 +2,8 @@
 
 Connects a Pill Pal lamp to Home Assistant over your home network. Home Assistant can
 switch and colour the ambient light, show notifications, statuses and gauges on the lamp,
-acknowledge or snooze a reminder, and run automations when someone touches the lamp.
+start and cancel countdowns, acknowledge or snooze a reminder, and run automations when
+someone touches the lamp.
 
 Reminders themselves stay in the Bindicator app. Home Assistant cannot create, change or
 delete them, and the lamp refuses it if asked.
@@ -17,6 +18,10 @@ delete them, and the lamp refuses it if asked.
 
 Home Assistant 2025.1 is the oldest release HACS will install this on. Older releases
 than the one above have not been tried.
+
+The countdown needs lamp firmware that includes it. The lamp says whether it has it, and
+the countdown actions and entities only work on a lamp that does. Version 0.3.0 of this
+integration, which adds them, has not yet been tried against a lamp with that firmware.
 
 ## Before you start
 
@@ -59,11 +64,17 @@ the first lamp; a second lamp gets `_2` on the end.
 | Gauge (`sensor.pill_pal_gauge`) | The gauge level as a percentage, with its colours, whether it is stale, and who set it |
 | Notification (`binary_sensor.pill_pal_notification`) | On while a notify is playing, with its pattern, colour, end time and who sent it |
 | Last reminder (`sensor.pill_pal_last_reminder`) | Done, missed or snoozed, for the most recent reminder that was acted on or ran out, with its name and time |
+| Countdown ends (`sensor.pill_pal_countdown_ends`) | When the running countdown reaches zero, with its phase, time left, colour, end and who started it. Countdown lamps only |
+| Last countdown (`sensor.pill_pal_last_countdown`) | How the most recent countdown ended: finished, dismissed, cancelled, replaced or ended by a restart. Countdown lamps only |
 | Wi-Fi signal | A diagnostic, off until you turn it on |
 
 Indicators and reminder actions from any controller appear here, not only the ones Home
-Assistant sent. A gauge set in the app, or a reminder acknowledged at the lamp, shows up
-the same way.
+Assistant sent. A gauge set in the app, a reminder acknowledged at the lamp, or a
+countdown started from the pads shows up the same way.
+
+The two countdown sensors are added when the lamp first reports that it has the
+countdown, including after a firmware update, without restarting Home Assistant. A lamp
+without it has neither sensor. If a lamp stops reporting it, they show unavailable.
 
 The scenes are warm white, candle, sunrise, candy floss, lavender, ocean, aurora, forest
 and sherbet. A colour chosen in the app or with `rgb_color` shows no effect.
@@ -73,11 +84,17 @@ and sherbet. A colour chosen in the app or with `rgb_color` shows no effect.
 | Attribute | Values |
 | --- | --- |
 | `event_type` | `tap`, `double_tap`, `long_press` |
-| `mode` | What was on top when the touch landed: `idle`, `status`, `reminder`, `notify` |
-| `action` | What the lamp did: `toggle_ambient`, `next_scene`, `acknowledge`, `snooze`, `acknowledge_status`, `dismiss_notify`, `undo`, `event_only` (bound to nothing) or `none` (nothing to act on) |
+| `mode` | What was on top when the touch landed: `idle`, `status`, `countdown`, `reminder`, `notify` |
+| `action` | What the lamp did: `toggle_ambient`, `next_scene`, `acknowledge`, `snooze`, `acknowledge_status`, `dismiss_notify`, `undo`, `start_countdown`, `pause_countdown`, `resume_countdown`, `cancel_countdown`, `dismiss_countdown`, `event_only` (bound to nothing) or `none` (nothing to act on) |
 | `pad` | `0` or `1`, which of the two touch pads |
+| `target_kind` | What the touch acted on: `occurrence`, `status`, `countdown`, or none |
 | `occurrence_id` | The reminder the touch acted on, if any |
 | `status_id`, `status_owner` | The status the touch acted on, if any |
+| `countdown_id` | The countdown the touch acted on, if any. For `start_countdown`, the one it started |
+
+`dismiss_countdown` is a touch that put out a finished countdown that was waiting for a
+tap. It can arrive with mode `notify`, when the touch landed during the 10-second pattern
+at the end.
 
 A long press is a touch held for 1 to 3 seconds. It does nothing on the lamp itself, so
 it is free for automations. Holding for longer than 3 seconds sends nothing. The
@@ -88,6 +105,30 @@ it is free for automations. Holding for longer than 3 seconds sends nothing. The
 `reminders` lists each reminder that is signalling, with `occurrence_id`, `name`, `due_at`
 and `ends_at`. `touch_target` is the occurrence a tap on the lamp would act on now, which
 is the earliest one due. Pass these IDs to `pill_pal.acknowledge` and `pill_pal.snooze`.
+
+### Countdown attributes
+
+The state of Countdown ends is the time the countdown reaches zero. It is empty when no
+countdown is set, while one is paused or finished, and while the lamp's clock is not set,
+because the lamp reports no end time then. The attributes are there whenever a countdown
+is set, from any controller.
+
+| Attribute | Values |
+| --- | --- |
+| `phase` | `running`, `paused`, or `finished` (zero reached, waiting for a tap) |
+| `remaining_seconds` | Seconds left when the lamp last reported, 0 when finished |
+| `duration_seconds` | How long it was started for |
+| `color` | Its colour, as `#rrggbb` |
+| `end_style`, `end_pattern` | How it ends: `brief` or `until_tapped`, and the pattern it plays |
+| `calm` | True when it does not step up near the end |
+| `escalated` | True once it has stepped up in its final stretch |
+| `shown` | False when it is set but there is no room for it on the lamp |
+| `set_by` | The name of the phone or connection that started it, `Home Assistant`, or `Lamp` for one started from the pads. Empty when the phone that started it has been removed |
+| `set_by_home_assistant`, `started_on_lamp` | True or false |
+| `countdown_id` | The lamp's number for this countdown |
+
+Last countdown has `countdown_id`, `at` (when it ended, empty if the lamp's clock was not
+set) and `duration_seconds`. A new countdown does not change it until that one ends.
 
 ## Actions
 
@@ -102,6 +143,11 @@ list; in YAML, the editor's YAML view shows the ID it chose.
 | `pill_pal.set_gauge` | `value`: 0 to 1. `color`: RGB at the empty end. `color_end`: optional RGB at the full end. `stale_after`: 60 to 86,400 seconds, default 900. |
 | `pill_pal.clear_gauge` | Nothing else. |
 | `pill_pal.acknowledge`, `pill_pal.snooze` | `occurrence_id`, from the Reminders showing or Touch attributes. A snooze lasts 10 minutes. |
+| `pill_pal.start_countdown` | `duration`: 10 seconds to 12 hours, in whole seconds, as a number of seconds, `"HH:MM:SS"`, or the duration picker. `color`: RGB. `end_style`: `brief` (default) or `until_tapped`. `end_pattern`: `flash`, `pulse` (default), `sweep` or `rainbow`. `calm`: true to stop it stepping up near the end, default false. |
+| `pill_pal.cancel_countdown` | Nothing else. Cancelling when no countdown is set does nothing. |
+
+The countdown actions fail with "This lamp has no countdown" on a lamp whose firmware
+does not include it, and Home Assistant sends nothing to the lamp.
 
 How they behave on the lamp:
 
@@ -118,6 +164,18 @@ How they behave on the lamp:
   so an old reading does not look current.
 - Acknowledge and snooze act on that one reminder only. Home Assistant cannot create,
   change or delete reminders.
+- A countdown drains the lamp from full to empty. The lamp runs one at a time, and a
+  start from Home Assistant, the app or the pads replaces the one running. Due reminders
+  show above it and statuses below it.
+- In the last tenth of a countdown, at most the last 5 minutes, it gets brighter and
+  moves more. A countdown under a minute, or one started with `calm`, does not.
+- At zero the lamp plays `end_pattern` in the countdown's colour for 10 seconds. With
+  `brief` the countdown is then gone. With `until_tapped` it stays lit until someone
+  touches the lamp, or until it is cancelled or replaced.
+- Only the pads can pause a countdown. Home Assistant can start and cancel one, and
+  cancel works whoever started it.
+- Like every command here, a start is refused while the lamp's clock is not set, for
+  example just after a power cut.
 
 ## Blueprints
 
@@ -129,7 +187,8 @@ and the entity to use.
 | [Play a pattern when something happens](blueprints/automation/pill_pal/notify_when.yaml) | A notify when an entity changes to a state, such as a washing machine finishing | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal-hacs%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Fnotify_when.yaml) |
 | [Show a status while something is true](blueprints/automation/pill_pal/status_while.yaml) | A status while an entity is in a state, such as a door open, cleared when it changes back and checked again after a restart | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal-hacs%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Fstatus_while.yaml) |
 | [Show a sensor on the gauge](blueprints/automation/pill_pal/gauge_from_sensor.yaml) | Fills the lamp in proportion to a sensor between a low and a high mark, such as solar export | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal-hacs%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Fgauge_from_sensor.yaml) |
-| [Do something when the lamp is touched](blueprints/automation/pill_pal/touch_action.yaml) | Runs your actions on a long press, tap or double tap, optionally only while a status or reminder is showing | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal-hacs%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Ftouch_action.yaml) |
+| [Start a countdown](blueprints/automation/pill_pal/countdown_when.yaml) | Starts a countdown when a trigger fires, by default 25 minutes at 08:20 on weekdays, with your duration, colour and end. Needs a lamp with the countdown | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal-hacs%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Fcountdown_when.yaml) |
+| [Do something when the lamp is touched](blueprints/automation/pill_pal/touch_action.yaml) | Runs your actions on a long press, tap or double tap, optionally only while a status, reminder or countdown is showing | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal-hacs%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Ftouch_action.yaml) |
 
 ## Examples in YAML
 
@@ -218,6 +277,25 @@ actions:
       entity_id: light.hallway
 ```
 
+Time to leave for school: 25 minutes from 08:20 on school days, using the Workday
+integration's sensor so holidays are skipped:
+
+```yaml
+triggers:
+  - trigger: time
+    at: "08:20:00"
+conditions:
+  - condition: state
+    entity_id: binary_sensor.workday_sensor
+    state: "on"
+actions:
+  - action: pill_pal.start_countdown
+    data:
+      device_id: YOUR_LAMP_DEVICE_ID
+      duration: "00:25:00"
+      color: [255, 179, 71]
+```
+
 Acknowledge the reminder the lamp is pointing at, from a button on a dashboard or a
 script:
 
@@ -240,6 +318,9 @@ script:
 - A notify is never queued. If the lamp is unreachable, the action fails with "Could not
   reach the lamp."
 - If the lamp gets a new address on your network, Home Assistant follows it.
+- A countdown ends if the lamp restarts and does not start again. Last countdown then
+  shows "Ended by a restart". A countdown that had finished and was waiting for a tap
+  ends without a report.
 
 ## Disconnecting
 
@@ -259,6 +340,7 @@ again, with a new code.
 | "The lamp no longer accepts Home Assistant" | Home Assistant was removed in the app, or the lamp was reset. Home Assistant asks to re-authenticate the lamp under Settings > Devices & services. Start that, then approve the new code in the app. |
 | "The lamp refused the command: status_full" | Eight statuses are set. Clear one you no longer need. |
 | "Could not reach the lamp" | Check the lamp has power and is on Wi-Fi. The entities show unavailable until it is back. |
+| "This lamp has no countdown" | The lamp's firmware does not include the countdown. The countdown sensors are missing for the same reason. |
 | A gauge looks dim and breathes | No value has arrived for longer than `stale_after`. Check the automation that sets it is still running. |
 
 ## Privacy on your network

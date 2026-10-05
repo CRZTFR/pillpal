@@ -3,18 +3,22 @@
 Each one is loaded the way Home Assistant loads an imported blueprint, so a broken input,
 template or action name fails here rather than in someone's home.
 """
+from datetime import datetime, timedelta
 from pathlib import Path
 import shutil
 
 import pytest
+from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.setup import async_setup_component
+from homeassistant.util import dt as dt_util
 
 from custom_components.pill_pal.const import DOMAIN, SIGNAL_TOUCH
 
+from .test_countdown import capable_lamp  # noqa: F401  (fixture)
 from .test_init import DEVICE, entry, lamp  # noqa: F401  (fixtures)
 
 BLUEPRINTS = Path(__file__).parent.parent / "blueprints" / "automation" / "pill_pal"
@@ -117,6 +121,7 @@ async def test_gauge_from_sensor(hass: HomeAssistant, entry, lamp) -> None:  # n
         ("tap", "idle", "any", False),
         ("long_press", "status", "status", True),
         ("long_press", "idle", "status", False),
+        ("long_press", "countdown", "countdown", True),
     ],
 )
 async def test_touch_action(hass: HomeAssistant, entry, lamp, gesture, mode, when, runs) -> None:  # noqa: F811
@@ -133,3 +138,48 @@ async def test_touch_action(hass: HomeAssistant, entry, lamp, gesture, mode, whe
     )
     await hass.async_block_till_done()
     assert hass.states.get("input_boolean.hallway").state == ("on" if runs else "off")
+
+
+async def test_countdown_when_on_school_days(hass: HomeAssistant, entry, capable_lamp, freezer) -> None:  # noqa: F811
+    lamp = capable_lamp
+    # Monday 5 October 2026, a minute before the default 08:20, in Home Assistant's zone.
+    monday = datetime(2026, 10, 5, 8, 19, tzinfo=dt_util.get_default_time_zone())
+    freezer.move_to(monday)
+    await _automate(hass, entry, lamp, "countdown_when.yaml", {})
+
+    freezer.move_to(monday + timedelta(minutes=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert _sent(lamp) == [("start_countdown", {
+        "durationSeconds": 1500, "colour": "#ffb347",
+        "end": {"style": "brief", "pattern": "pulse"}, "calm": False,
+    })]
+
+    # Every weekday at 08:20, and not at the weekend.
+    for day, school in [(1, True), (4, True), (5, False), (6, False), (7, True)]:
+        lamp.reset_mock()
+        freezer.move_to(monday + timedelta(days=day, minutes=1))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+        assert len(_sent(lamp)) == (1 if school else 0), day
+
+
+async def test_countdown_when_with_its_own_trigger(hass: HomeAssistant, entry, capable_lamp) -> None:  # noqa: F811
+    lamp = capable_lamp
+    hass.states.async_set("input_boolean.bath", "off")
+    await _automate(hass, entry, lamp, "countdown_when.yaml", {
+        "start": [{"trigger": "state", "entity_id": "input_boolean.bath", "to": "on"}],
+        "only_if": [],
+        "duration": {"hours": 0, "minutes": 12, "seconds": 0},
+        "color": [255, 136, 0],
+        "end_style": "until_tapped",
+        "end_pattern": "sweep",
+        "calm": True,
+    })
+
+    hass.states.async_set("input_boolean.bath", "on")
+    await hass.async_block_till_done()
+    assert _sent(lamp) == [("start_countdown", {
+        "durationSeconds": 720, "colour": "#ff8800",
+        "end": {"style": "until_tapped", "pattern": "sweep"}, "calm": True,
+    })]

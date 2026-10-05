@@ -108,6 +108,46 @@ clear_gauge:
       selector:
         device:
           integration: pill_pal
+start_countdown:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: pill_pal
+    duration:
+      required: true
+      example: "00:25:00"
+      selector:
+        duration:
+          enable_day: false
+    color:
+      required: true
+      selector:
+        color_rgb:
+    end_style:
+      default: brief
+      selector:
+        select:
+          options: [brief, until_tapped]
+          translation_key: countdown_end_style
+    end_pattern:
+      default: pulse
+      selector:
+        select:
+          options: [flash, pulse, sweep, rainbow]
+          translation_key: notify_pattern
+    calm:
+      default: false
+      selector:
+        boolean:
+cancel_countdown:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: pill_pal
 acknowledge:
   fields:
     device_id:

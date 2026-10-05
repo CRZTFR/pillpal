@@ -593,6 +593,434 @@
       "expect": "valid",
       "canonical": {},
       "note": "No payload is the same as an empty one."
+    },
+    {
+      "id": "countdown-defaults",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 300,
+        "colour": "#FFB347"
+      },
+      "expect": "valid",
+      "canonical": {
+        "durationSeconds": 300,
+        "colour": "#ffb347",
+        "end": {
+          "style": "brief",
+          "pattern": "pulse"
+        },
+        "calm": false
+      },
+      "note": "No end means a brief pulse."
+    },
+    {
+      "id": "countdown-until-tapped",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 720,
+        "colour": "#ff8800",
+        "end": {
+          "style": "until_tapped",
+          "pattern": "sweep"
+        },
+        "calm": true
+      },
+      "expect": "valid",
+      "canonical": {
+        "durationSeconds": 720,
+        "colour": "#ff8800",
+        "end": {
+          "style": "until_tapped",
+          "pattern": "sweep"
+        },
+        "calm": true
+      }
+    },
+    {
+      "id": "countdown-end-style-only",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 60,
+        "colour": "#ffffff",
+        "end": {
+          "style": "until_tapped"
+        }
+      },
+      "expect": "valid",
+      "canonical": {
+        "durationSeconds": 60,
+        "colour": "#ffffff",
+        "end": {
+          "style": "until_tapped",
+          "pattern": "pulse"
+        },
+        "calm": false
+      }
+    },
+    {
+      "id": "countdown-end-pattern-only",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 60,
+        "colour": "#ffffff",
+        "end": {
+          "pattern": "rainbow"
+        }
+      },
+      "expect": "valid",
+      "canonical": {
+        "durationSeconds": 60,
+        "colour": "#ffffff",
+        "end": {
+          "style": "brief",
+          "pattern": "rainbow"
+        },
+        "calm": false
+      },
+      "note": "A rainbow end ignores the colour, as notify does; the countdown still drains in it."
+    },
+    {
+      "id": "countdown-end-empty-object",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 60,
+        "colour": "#ffffff",
+        "end": {}
+      },
+      "expect": "valid",
+      "canonical": {
+        "durationSeconds": 60,
+        "colour": "#ffffff",
+        "end": {
+          "style": "brief",
+          "pattern": "pulse"
+        },
+        "calm": false
+      }
+    },
+    {
+      "id": "countdown-end-null",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 60,
+        "colour": "#ffffff",
+        "end": null,
+        "calm": null
+      },
+      "expect": "valid",
+      "canonical": {
+        "durationSeconds": 60,
+        "colour": "#ffffff",
+        "end": {
+          "style": "brief",
+          "pattern": "pulse"
+        },
+        "calm": false
+      },
+      "note": "Null is absent, as for every optional field."
+    },
+    {
+      "id": "countdown-shortest",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 10,
+        "colour": "#ffffff"
+      },
+      "expect": "valid",
+      "canonical": {
+        "durationSeconds": 10,
+        "colour": "#ffffff",
+        "end": {
+          "style": "brief",
+          "pattern": "pulse"
+        },
+        "calm": false
+      }
+    },
+    {
+      "id": "countdown-longest",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 43200,
+        "colour": "#ffffff"
+      },
+      "expect": "valid",
+      "canonical": {
+        "durationSeconds": 43200,
+        "colour": "#ffffff",
+        "end": {
+          "style": "brief",
+          "pattern": "pulse"
+        },
+        "calm": false
+      },
+      "note": "Twelve hours."
+    },
+    {
+      "id": "countdown-from-an-integration",
+      "operation": "start_countdown",
+      "holder": "integration",
+      "payload": {
+        "durationSeconds": 1500,
+        "colour": "#3366ff"
+      },
+      "expect": "valid",
+      "canonical": {
+        "durationSeconds": 1500,
+        "colour": "#3366ff",
+        "end": {
+          "style": "brief",
+          "pattern": "pulse"
+        },
+        "calm": false
+      }
+    },
+    {
+      "id": "countdown-nine-seconds",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 9,
+        "colour": "#ffffff"
+      },
+      "expect": "invalid_payload"
+    },
+    {
+      "id": "countdown-zero-seconds",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 0,
+        "colour": "#ffffff"
+      },
+      "expect": "invalid_payload"
+    },
+    {
+      "id": "countdown-negative",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": -60,
+        "colour": "#ffffff"
+      },
+      "expect": "invalid_payload"
+    },
+    {
+      "id": "countdown-over-twelve-hours",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 43201,
+        "colour": "#ffffff"
+      },
+      "expect": "invalid_payload"
+    },
+    {
+      "id": "countdown-missing-duration",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "colour": "#ffffff"
+      },
+      "expect": "invalid_payload"
+    },
+    {
+      "id": "countdown-missing-colour",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 60
+      },
+      "expect": "invalid_payload"
+    },
+    {
+      "id": "countdown-bad-colour",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 60,
+        "colour": "orange"
+      },
+      "expect": "invalid_payload"
+    },
+    {
+      "id": "countdown-unknown-style",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 60,
+        "colour": "#ffffff",
+        "end": {
+          "style": "forever"
+        }
+      },
+      "expect": "invalid_payload"
+    },
+    {
+      "id": "countdown-unknown-pattern",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 60,
+        "colour": "#ffffff",
+        "end": {
+          "pattern": "strobe"
+        }
+      },
+      "expect": "invalid_payload"
+    },
+    {
+      "id": "countdown-status-pattern-is-not-a-notify-pattern",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 60,
+        "colour": "#ffffff",
+        "end": {
+          "pattern": "solid"
+        }
+      },
+      "expect": "invalid_payload",
+      "note": "The end plays as a notify, so only notify patterns."
+    },
+    {
+      "id": "countdown-fractional-seconds",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 60.5,
+        "colour": "#ffffff"
+      },
+      "expect": "malformed",
+      "dynamicOnly": true
+    },
+    {
+      "id": "countdown-duration-as-string",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": "60",
+        "colour": "#ffffff"
+      },
+      "expect": "malformed",
+      "dynamicOnly": true
+    },
+    {
+      "id": "countdown-end-as-string",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 60,
+        "colour": "#ffffff",
+        "end": "until_tapped"
+      },
+      "expect": "malformed",
+      "dynamicOnly": true
+    },
+    {
+      "id": "countdown-style-as-number",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 60,
+        "colour": "#ffffff",
+        "end": {
+          "style": 1
+        }
+      },
+      "expect": "malformed",
+      "dynamicOnly": true
+    },
+    {
+      "id": "countdown-calm-as-number",
+      "operation": "start_countdown",
+      "holder": "phone",
+      "payload": {
+        "durationSeconds": 60,
+        "colour": "#ffffff",
+        "calm": 1
+      },
+      "expect": "malformed",
+      "dynamicOnly": true,
+      "note": "1 is not true, in any language."
+    },
+    {
+      "id": "cancel-countdown",
+      "operation": "cancel_countdown",
+      "holder": "phone",
+      "payload": {},
+      "expect": "valid",
+      "canonical": {}
+    },
+    {
+      "id": "cancel-countdown-no-payload",
+      "operation": "cancel_countdown",
+      "holder": "integration",
+      "payload": null,
+      "expect": "valid",
+      "canonical": {},
+      "note": "Any controller may cancel."
     }
-  ]
+  ],
+  "countdownEscalation": {
+    "description": "escalationSeconds = durationSeconds < 60 ? 0 : min(durationSeconds / 10, 300), integer division (indicators.md, start_countdown).",
+    "cases": [
+      {
+        "durationSeconds": 10,
+        "escalationSeconds": 0
+      },
+      {
+        "durationSeconds": 59,
+        "escalationSeconds": 0
+      },
+      {
+        "durationSeconds": 60,
+        "escalationSeconds": 6
+      },
+      {
+        "durationSeconds": 119,
+        "escalationSeconds": 11
+      },
+      {
+        "durationSeconds": 120,
+        "escalationSeconds": 12
+      },
+      {
+        "durationSeconds": 240,
+        "escalationSeconds": 24
+      },
+      {
+        "durationSeconds": 720,
+        "escalationSeconds": 72
+      },
+      {
+        "durationSeconds": 1500,
+        "escalationSeconds": 150
+      },
+      {
+        "durationSeconds": 2999,
+        "escalationSeconds": 299
+      },
+      {
+        "durationSeconds": 3000,
+        "escalationSeconds": 300
+      },
+      {
+        "durationSeconds": 3001,
+        "escalationSeconds": 300
+      },
+      {
+        "durationSeconds": 43200,
+        "escalationSeconds": 300
+      }
+    ]
+  }
 }

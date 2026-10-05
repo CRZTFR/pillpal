@@ -12,6 +12,11 @@ The gauge and the last reminder mirror what any controller did, so a gauge set f
 app or a reminder acknowledged at the lamp shows here as well. An occurrence that ends
 leaves the live list, so how it ended comes from the snapshot's recent outcomes; a snooze
 is not terminal and is read from the live occurrence instead.
+
+The countdown is mirrored the same way, from whichever controller started it, including
+the lamp's own pads. Its two sensors exist only on a lamp that states the capability: they
+are added when a snapshot first states it, so a firmware update needs no reload, and they
+go unavailable if a later snapshot stops stating it.
 """
 from __future__ import annotations
 
@@ -27,12 +32,18 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.const import PERCENTAGE, SIGNAL_STRENGTH_DECIBELS_MILLIWATT, EntityCategory
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
 
 from . import PillPalConfigEntry
-from .const import SNOOZE_MS
+from .const import (
+    CAPABILITY_COUNTDOWN,
+    COUNTDOWN_END_REASONS,
+    INTEGRATION_NAME,
+    LAMP_OWNER_LABEL,
+    SNOOZE_MS,
+)
 from .coordinator import PillPalCoordinator
 from .entity import PillPalEntity, set_by, wire_time
 from .instants import Instant
@@ -222,10 +233,77 @@ def _last_reminder_attributes(data: dict[str, Any], _grant: int) -> dict[str, An
     }
 
 
+def _countdown(data: dict[str, Any]) -> dict[str, Any] | None:
+    countdown = (data.get("indicators") or {}).get("countdown")
+    return countdown if isinstance(countdown, dict) else None
+
+
+def _countdown_ends(data: dict[str, Any], _grant: int) -> datetime | None:
+    """When a running countdown reaches zero. None while paused or finished, and without
+    lamp time, because the lamp then reports no end."""
+    countdown = _countdown(data)
+    if countdown is None or countdown.get("phase") != "running":
+        return None
+    return wire_time(countdown.get("endsAt"))
+
+
+def _countdown_attributes(data: dict[str, Any], grant: int) -> dict[str, Any]:
+    countdown = _countdown(data)
+    if countdown is None:
+        return {}
+    end = countdown.get("end") if isinstance(countdown.get("end"), dict) else {}
+    owner = countdown.get("owner")
+    label = countdown.get("ownerLabel")
+    if owner == 0:
+        label = LAMP_OWNER_LABEL
+    elif label is None and owner == grant:
+        label = INTEGRATION_NAME
+    return {
+        "countdown_id": countdown.get("id"),
+        "phase": countdown.get("phase"),
+        "remaining_seconds": countdown.get("remainingSeconds"),
+        "duration_seconds": countdown.get("durationSeconds"),
+        "color": countdown.get("colour"),
+        "end_style": end.get("style"),
+        "end_pattern": end.get("pattern"),
+        "calm": countdown.get("calm"),
+        "escalated": countdown.get("escalated"),
+        "shown": countdown.get("shown"),
+        "set_by": label,
+        "set_by_home_assistant": owner == grant,
+        "started_on_lamp": owner == 0,
+    }
+
+
+def _countdown_ended(data: dict[str, Any]) -> dict[str, Any] | None:
+    ended = (data.get("indicators") or {}).get("countdownEnded")
+    return ended if isinstance(ended, dict) else None
+
+
+def _last_countdown_state(data: dict[str, Any], _grant: int) -> str | None:
+    ended = _countdown_ended(data)
+    reason = ended.get("reason") if ended else None
+    return reason if reason in COUNTDOWN_END_REASONS else None
+
+
+def _last_countdown_attributes(data: dict[str, Any], _grant: int) -> dict[str, Any]:
+    ended = _countdown_ended(data)
+    if ended is None:
+        return {}
+    at = wire_time(ended.get("at"))
+    return {
+        "countdown_id": ended.get("id"),
+        "at": at.isoformat() if at else None,
+        "duration_seconds": ended.get("durationSeconds"),
+    }
+
+
 @dataclass(frozen=True, kw_only=True)
 class PillPalSensorDescription(SensorEntityDescription):
     value: Callable[[dict[str, Any], int], Any]
     attributes: Callable[[dict[str, Any], int], dict[str, Any]] | None = None
+    # A capability the lamp must state in its snapshot for this sensor to exist.
+    capability: str | None = None
 
 
 SENSORS = (
@@ -275,6 +353,23 @@ SENSORS = (
         value=_wifi_signal,
         attributes=_wifi_attributes,
     ),
+    PillPalSensorDescription(
+        key="countdown_ends",
+        translation_key="countdown_ends",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value=_countdown_ends,
+        attributes=_countdown_attributes,
+        capability=CAPABILITY_COUNTDOWN,
+    ),
+    PillPalSensorDescription(
+        key="last_countdown",
+        translation_key="last_countdown",
+        device_class=SensorDeviceClass.ENUM,
+        options=COUNTDOWN_END_REASONS,
+        value=_last_countdown_state,
+        attributes=_last_countdown_attributes,
+        capability=CAPABILITY_COUNTDOWN,
+    ),
 )
 
 
@@ -282,7 +377,20 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: PillPalConfigEntry, add: AddConfigEntryEntitiesCallback
 ) -> None:
     coordinator = entry.runtime_data.coordinator
-    add(PillPalSensor(coordinator, description) for description in SENSORS)
+    pending = {d.capability for d in SENSORS if d.capability is not None}
+
+    @callback
+    def add_stated() -> None:
+        stated = {c for c in pending if coordinator.supports(c)}
+        if stated:
+            pending.difference_update(stated)
+            add(PillPalSensor(coordinator, d) for d in SENSORS if d.capability in stated)
+
+    add(PillPalSensor(coordinator, d) for d in SENSORS if d.capability is None)
+    add_stated()
+    if pending:
+        # A firmware update that adds a capability shows up in a later snapshot.
+        entry.async_on_unload(coordinator.async_add_listener(add_stated))
 
 
 class PillPalSensor(PillPalEntity, SensorEntity):
@@ -291,6 +399,13 @@ class PillPalSensor(PillPalEntity, SensorEntity):
     def __init__(self, coordinator: PillPalCoordinator, description: PillPalSensorDescription) -> None:
         super().__init__(coordinator, description.key)
         self.entity_description = description
+
+    @property
+    def available(self) -> bool:
+        capability = self.entity_description.capability
+        return super().available and (
+            capability is None or self.coordinator.supports(capability)
+        )
 
     @property
     def native_value(self) -> Any:

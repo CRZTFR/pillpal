@@ -56,6 +56,7 @@ class PillPalTouch(PillPalEntity, EventEntity):
             "occurrence_id": target.get("id") if target.get("kind") == "occurrence" else None,
             "status_id": target.get("id") if target.get("kind") == "status" else None,
             "status_owner": target.get("owner") if target.get("kind") == "status" else None,
+            "countdown_id": target.get("id") if target.get("kind") == "countdown" else None,
         }
         self._trigger_event(gesture, attributes)
         self.async_write_ha_state()

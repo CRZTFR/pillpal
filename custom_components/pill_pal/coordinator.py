@@ -60,6 +60,10 @@ class PillPalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except PillPalError as err:
             raise UpdateFailed(str(err)) from err
 
+    def supports(self, capability: str) -> bool:
+        """Whether the lamp states this capability. Never inferred from a firmware number."""
+        return ((self.data or {}).get("capabilities") or {}).get(capability) is True
+
     def statuses(self) -> list[dict[str, Any]]:
         return list(((self.data or {}).get("indicators") or {}).get("statuses") or [])
 
