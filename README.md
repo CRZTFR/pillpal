@@ -63,7 +63,7 @@ the first lamp; a second lamp gets `_2` on the end.
 | Statuses (`sensor.pill_pal_statuses`) | How many statuses are set, listed in its attributes with who set each one |
 | Gauge (`sensor.pill_pal_gauge`) | The gauge level as a percentage, with its colours, whether it is stale, and who set it |
 | Notification (`binary_sensor.pill_pal_notification`) | On while a notify is playing, with its pattern, colour, end time and who sent it |
-| Last reminder (`sensor.pill_pal_last_reminder`) | Done, missed or snoozed, for the most recent reminder that was acted on or ran out, with its name and time |
+| Last reminder (`sensor.pill_pal_last_reminder`) | Done, missed or snoozed, for the most recent reminder that was acted on or ran out, with its name, its time and, when done, who acknowledged it |
 | Countdown ends (`sensor.pill_pal_countdown_ends`) | When the running countdown reaches zero, with its phase, time left, colour, end and who started it. Countdown lamps only |
 | Last countdown (`sensor.pill_pal_last_countdown`) | How the most recent countdown ended: finished, dismissed, cancelled, replaced or ended by a restart. Countdown lamps only |
 | Wi-Fi signal | A diagnostic, off until you turn it on |
@@ -105,6 +105,19 @@ it is free for automations. Holding for longer than 3 seconds sends nothing. The
 `reminders` lists each reminder that is signalling, with `occurrence_id`, `name`, `due_at`
 and `ends_at`. `touch_target` is the occurrence a tap on the lamp would act on now, which
 is the earliest one due. Pass these IDs to `pill_pal.acknowledge` and `pill_pal.snooze`.
+
+### Last reminder attributes
+
+| Attribute | Values |
+| --- | --- |
+| `name` | The reminder's name, if it has one |
+| `at` | When it was done or missed. For a snooze, when the snooze runs out |
+| `occurrence_id` | The lamp's number for this turn of the reminder |
+| `by` | Who acknowledged a done reminder: `touch` (a tap on the lamp), `phone`, `integration` (Home Assistant or another connection) or `cloud`. `unknown` when the lamp does not say, as older firmware does not, or when it names a kind this integration does not know. Empty when it was missed or snoozed |
+| `by_label` | The name of the phone or connection that acknowledged it, as the lamp knew it then. Empty for `touch`, and when that phone or connection has since been removed |
+
+`by` records which pad, phone or connection marked the reminder done. It cannot say who
+took a medication.
 
 ### Countdown attributes
 

@@ -11,7 +11,8 @@ the day someone asks why the lamp keeps dropping out; firmware from 2026-09-29 r
 The gauge and the last reminder mirror what any controller did, so a gauge set from the
 app or a reminder acknowledged at the lamp shows here as well. An occurrence that ends
 leaves the live list, so how it ended comes from the snapshot's recent outcomes; a snooze
-is not terminal and is read from the live occurrence instead.
+is not terminal and is read from the live occurrence instead. A done reminder says who
+acknowledged it from the outcome's `by`, or "unknown" from a lamp that does not say.
 
 The countdown is mirrored the same way, from whichever controller started it, including
 the lamp's own pads. Its two sensors exist only on a lamp that states the capability: they
@@ -184,6 +185,31 @@ def _gauge_attributes(data: dict[str, Any], grant: int) -> dict[str, Any]:
 
 OUTCOMES = {"acknowledged": "done", "expired": "missed"}
 LAST_REMINDER_STATES = ["done", "missed", "snoozed"]
+ACKNOWLEDGER_KINDS = ("touch", "phone", "integration", "cloud")
+NOT_SAID = "unknown"
+
+
+def who_acknowledged(row: dict[str, Any]) -> dict[str, Any] | str | None:
+    """`by` on an outcome or occurrence, read as acknowledged_by.json says: an object
+    {kind, grantId, label}; None for no one (`by` is null); "unknown" when the lamp did
+    not say (`by` absent, as from a lamp without acknowledgedBy, or unusable). A kind this
+    integration does not know reads as "unknown" with its label kept."""
+    if "by" not in row:
+        return NOT_SAID
+    by = row["by"]
+    if by is None:
+        return None
+    if not isinstance(by, dict) or not isinstance(by.get("kind"), str):
+        return NOT_SAID
+    kind = by["kind"] if by["kind"] in ACKNOWLEDGER_KINDS else "unknown"
+    if kind == "touch":  # a touch names no grant, whatever else it holds
+        return {"kind": "touch", "grantId": None, "label": None}
+    grant_id, label = by.get("grantId"), by.get("label")
+    return {
+        "kind": kind,
+        "grantId": grant_id if isinstance(grant_id, int) and not isinstance(grant_id, bool) else None,
+        "label": label if isinstance(label, str) else None,
+    }
 
 
 def _last_reminder(data: dict[str, Any]) -> dict[str, Any] | None:
@@ -205,16 +231,17 @@ def _last_reminder(data: dict[str, Any]) -> dict[str, Any] | None:
         name = names.get(row.get("id"))
         if name is None and row.get("source") == "native":
             name = schedules.get(row.get("ownerId"))
-        candidates.append((at, row.get("id"), OUTCOMES[row["state"]], at, name))
+        by = who_acknowledged(row) if row["state"] == "acknowledged" else None
+        candidates.append((at, row.get("id"), OUTCOMES[row["state"]], at, name, by))
     for o in occurrences:
         until = wire_time(o.get("snoozeDeadline"))
         if o.get("state") == "snoozed" and o.get("id") not in ended and until is not None:
             snoozed_at = until - timedelta(milliseconds=SNOOZE_MS)
-            candidates.append((snoozed_at, o.get("id"), "snoozed", until, o.get("name")))
+            candidates.append((snoozed_at, o.get("id"), "snoozed", until, o.get("name"), None))
     if not candidates:
         return None
-    _, occurrence, state, at, name = max(candidates, key=lambda c: (c[0], c[1] or 0))
-    return {"state": state, "at": at, "occurrence_id": occurrence, "name": name}
+    _, occurrence, state, at, name, by = max(candidates, key=lambda c: (c[0], c[1] or 0))
+    return {"state": state, "at": at, "occurrence_id": occurrence, "name": name, "by": by}
 
 
 def _last_reminder_state(data: dict[str, Any], _grant: int) -> str | None:
@@ -226,10 +253,15 @@ def _last_reminder_attributes(data: dict[str, Any], _grant: int) -> dict[str, An
     last = _last_reminder(data)
     if last is None:
         return {}
+    by = last["by"]
+    # Who acknowledged it: only a done reminder has someone. A miss or a snooze has
+    # neither attribute set.
     return {
         "name": last["name"],
         "at": last["at"].isoformat(),
         "occurrence_id": last["occurrence_id"],
+        "by": by["kind"] if isinstance(by, dict) else by,
+        "by_label": by["label"] if isinstance(by, dict) else None,
     }
 
 

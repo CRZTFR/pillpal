@@ -1,0 +1,219 @@
+{
+  "contract": "device-v2",
+  "version": 1,
+  "description": "Who acknowledged (README, 'Who acknowledged'): how a client reads `by` on a recent outcome or a live occurrence. reads is the meaning: an object {kind, grantId, label}; null for no one (by is null); 'unknown' when the lamp did not say (by absent or unusable). A kind the client does not know reads as 'unknown' with the label kept. Same rules for the outcome topic and the webhook's reminder event.",
+  "cases": [
+    {
+      "id": "touch",
+      "row": {
+        "id": 41,
+        "source": "native",
+        "ownerId": 3,
+        "endedAt": 1789635600000,
+        "state": "acknowledged",
+        "by": {
+          "kind": "touch"
+        }
+      },
+      "reads": {
+        "kind": "touch",
+        "grantId": null,
+        "label": null
+      }
+    },
+    {
+      "id": "phone",
+      "row": {
+        "id": 41,
+        "source": "native",
+        "ownerId": 3,
+        "endedAt": 1789635600000,
+        "state": "acknowledged",
+        "by": {
+          "kind": "phone",
+          "grantId": 2,
+          "label": "Kitchen phone"
+        }
+      },
+      "reads": {
+        "kind": "phone",
+        "grantId": 2,
+        "label": "Kitchen phone"
+      }
+    },
+    {
+      "id": "integration",
+      "row": {
+        "id": 41,
+        "source": "native",
+        "ownerId": 3,
+        "endedAt": 1789635600000,
+        "state": "acknowledged",
+        "by": {
+          "kind": "integration",
+          "grantId": 9,
+          "label": "Home Assistant"
+        }
+      },
+      "reads": {
+        "kind": "integration",
+        "grantId": 9,
+        "label": "Home Assistant"
+      }
+    },
+    {
+      "id": "cloud-grant",
+      "row": {
+        "id": 41,
+        "source": "native",
+        "ownerId": 3,
+        "endedAt": 1789635600000,
+        "state": "acknowledged",
+        "by": {
+          "kind": "cloud",
+          "grantId": 12,
+          "label": "Webhook"
+        }
+      },
+      "reads": {
+        "kind": "cloud",
+        "grantId": 12,
+        "label": "Webhook"
+      },
+      "note": "The webhook cannot acknowledge today (webhooks.md, Scope); a client still reads the kind."
+    },
+    {
+      "id": "grant-gone",
+      "row": {
+        "id": 41,
+        "source": "native",
+        "ownerId": 3,
+        "endedAt": 1789635600000,
+        "state": "acknowledged",
+        "by": {
+          "kind": "phone",
+          "grantId": 2,
+          "label": null
+        }
+      },
+      "reads": {
+        "kind": "phone",
+        "grantId": 2,
+        "label": null
+      },
+      "note": "The phone was removed since. Shown as a phone, without a name."
+    },
+    {
+      "id": "expired",
+      "row": {
+        "id": 41,
+        "source": "native",
+        "ownerId": 3,
+        "endedAt": 1789635600000,
+        "state": "expired",
+        "by": null
+      },
+      "reads": null
+    },
+    {
+      "id": "superseded",
+      "row": {
+        "id": 41,
+        "source": "native",
+        "ownerId": 3,
+        "endedAt": 1789635600000,
+        "state": "superseded",
+        "by": null
+      },
+      "reads": null
+    },
+    {
+      "id": "older-lamp",
+      "row": {
+        "id": 41,
+        "source": "native",
+        "ownerId": 3,
+        "endedAt": 1789635600000,
+        "state": "acknowledged"
+      },
+      "reads": "unknown",
+      "note": "No by at all: a lamp without acknowledgedBy. Not the same as null."
+    },
+    {
+      "id": "unknown-kind",
+      "row": {
+        "id": 41,
+        "source": "native",
+        "ownerId": 3,
+        "endedAt": 1789635600000,
+        "state": "acknowledged",
+        "by": {
+          "kind": "voice",
+          "grantId": 20,
+          "label": "Kitchen speaker"
+        }
+      },
+      "reads": {
+        "kind": "unknown",
+        "grantId": 20,
+        "label": "Kitchen speaker"
+      },
+      "note": "A kind this client does not know is shown as someone, by label, not refused."
+    },
+    {
+      "id": "by-not-an-object",
+      "row": {
+        "id": 41,
+        "source": "native",
+        "ownerId": 3,
+        "endedAt": 1789635600000,
+        "state": "acknowledged",
+        "by": "touch"
+      },
+      "reads": "unknown",
+      "dynamicOnly": true
+    },
+    {
+      "id": "grant-id-as-string",
+      "row": {
+        "id": 41,
+        "source": "native",
+        "ownerId": 3,
+        "endedAt": 1789635600000,
+        "state": "acknowledged",
+        "by": {
+          "kind": "phone",
+          "grantId": "2",
+          "label": "Kitchen phone"
+        }
+      },
+      "reads": {
+        "kind": "phone",
+        "grantId": null,
+        "label": "Kitchen phone"
+      },
+      "dynamicOnly": true
+    },
+    {
+      "id": "touch-with-a-grant",
+      "row": {
+        "id": 41,
+        "source": "native",
+        "ownerId": 3,
+        "endedAt": 1789635600000,
+        "state": "acknowledged",
+        "by": {
+          "kind": "touch",
+          "grantId": 2,
+          "label": "Kitchen phone"
+        }
+      },
+      "reads": {
+        "kind": "touch",
+        "grantId": null,
+        "label": null
+      },
+      "note": "A touch names no grant; extra fields are ignored."
+    }
+  ]
+}

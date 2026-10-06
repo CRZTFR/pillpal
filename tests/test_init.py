@@ -341,11 +341,13 @@ async def test_a_reminder_acknowledged_elsewhere(hass: HomeAssistant, entry, lam
         **SNAPSHOT,
         "recentOutcomes": [
             {"id": 2, "source": "native", "ownerId": 1, "state": "acknowledged",
-             "endedAt": 1790598100000},
+             "endedAt": 1790598100000,
+             "by": {"kind": "phone", "grantId": 2, "label": "Kitchen phone"}},
         ],
     })
     await hass.async_block_till_done()
     last = hass.states.get("sensor.pill_pal_last_reminder")
     assert last.state == "done"
     assert last.attributes["occurrence_id"] == 2
+    assert (last.attributes["by"], last.attributes["by_label"]) == ("phone", "Kitchen phone")
     assert last.attributes["options"] == ["done", "missed", "snoozed"]
