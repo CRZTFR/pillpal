@@ -66,3 +66,6 @@ NOTIFY_PATTERNS = ["flash", "pulse", "sweep", "rainbow"]
 STATUS_PATTERNS = ["solid", "pulse"]
 PRIORITIES = ["low", "normal", "high"]
 GESTURES = ["tap", "double_tap", "long_press"]
+# A knock is only ever a tap or a double tap (indicators.md, "Touch events"). Its own
+# names, so an automation reads as what happened at the lamp.
+KNOCK_GESTURES = {"tap": "knock", "double_tap": "double_knock"}

@@ -8,6 +8,8 @@ import shutil
 
 import pytest
 
+from unittest.mock import AsyncMock, patch
+
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
@@ -15,7 +17,7 @@ from homeassistant.setup import async_setup_component
 
 from custom_components.pill_pal.const import DOMAIN, SIGNAL_TOUCH
 
-from .test_init import DEVICE, entry, lamp  # noqa: F401  (fixtures)
+from .test_init import DEVICE, SNAPSHOT, entry, lamp  # noqa: F401  (fixtures)
 
 BLUEPRINTS = Path(__file__).parent.parent / "blueprints" / "automation" / "pill_pal"
 
@@ -26,7 +28,7 @@ async def _automate(hass: HomeAssistant, entry, lamp, path: str, inputs: dict) -
     shutil.copytree(BLUEPRINTS, hass.config.path("blueprints/automation/pill_pal"),
                     dirs_exist_ok=True)
     device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, DEVICE)})
-    if "touch" not in inputs:
+    if not inputs.keys() & {"touch", "knock"}:
         inputs = {"lamp": device.id, **inputs}
     assert await async_setup_component(
         hass, "automation",
@@ -133,3 +135,40 @@ async def test_touch_action(hass: HomeAssistant, entry, lamp, gesture, mode, whe
     )
     await hass.async_block_till_done()
     assert hass.states.get("input_boolean.hallway").state == ("on" if runs else "off")
+
+
+@pytest.mark.parametrize(
+    ("gesture", "mode", "when", "runs"),
+    [
+        ("double_tap", "idle", "any", True),
+        ("tap", "idle", "any", False),
+        ("double_tap", "reminder", "reminder", True),
+        ("double_tap", "idle", "reminder", False),
+    ],
+)
+async def test_knock_action(hass: HomeAssistant, entry, lamp, gesture, mode, when, runs) -> None:  # noqa: F811
+    knocking = {**SNAPSHOT, "capabilities": {"touch": True, "knock": True}}
+    with patch("custom_components.pill_pal.api.PillPalClient.state", AsyncMock(return_value=knocking)):
+        await _automate(hass, entry, lamp, "knock_action.yaml",
+                        {"knock": "event.pill_pal_knock", "when": when,
+                         "actions": [{"action": "input_boolean.toggle",
+                                      "target": {"entity_id": "input_boolean.hallway"}}]})
+        assert await async_setup_component(hass, "input_boolean", {"input_boolean": {"hallway": {}}})
+        await hass.async_block_till_done()
+
+        # A touch on the pad is not a knock, whatever the gesture.
+        async_dispatcher_send(
+            hass, SIGNAL_TOUCH.format(device_id=DEVICE),
+            {"gesture": gesture, "pad": 0, "input": "touch", "mode": mode, "target": None,
+             "action": "event_only"},
+        )
+        await hass.async_block_till_done()
+        assert hass.states.get("input_boolean.hallway").state == "off"
+
+        async_dispatcher_send(
+            hass, SIGNAL_TOUCH.format(device_id=DEVICE),
+            {"gesture": gesture, "pad": 1, "input": "knock", "mode": mode, "target": None,
+             "action": "event_only"},
+        )
+        await hass.async_block_till_done()
+        assert hass.states.get("input_boolean.hallway").state == ("on" if runs else "off")

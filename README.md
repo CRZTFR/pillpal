@@ -52,7 +52,8 @@ the first lamp; a second lamp gets `_2` on the end.
 | Entity | What it does |
 | --- | --- |
 | Ambient light (`light.pill_pal_ambient_light`) | On, off, brightness, colour, and the built-in scenes as effects |
-| Touch (`event.pill_pal_touch`) | An event for every tap, double tap and long press, with what the lamp was showing and what it did |
+| Touch (`event.pill_pal_touch`) | An event for every tap, double tap and long press on the lamp's touch pad, with what the lamp was showing and what it did |
+| Knock (`event.pill_pal_knock`) | An event for every knock and double knock on the lamp, with the same attributes. Unavailable while the lamp's knock sensor is not working |
 | Next reminder (`sensor.pill_pal_next_reminder`) | When the next reminder is due |
 | Reminders showing (`sensor.pill_pal_reminders_showing`) | How many reminders are signalling now, listed in its attributes |
 | Statuses (`sensor.pill_pal_statuses`) | How many statuses are set, listed in its attributes with who set each one |
@@ -68,14 +69,19 @@ the same way.
 The scenes are warm white, candle, sunrise, candy floss, lavender, ocean, aurora, forest
 and sherbet. A colour chosen in the app or with `rgb_color` shows no effect.
 
-### Touch attributes
+### Touch and knock attributes
+
+The lamp has a touch pad and a knock sensor. A knock does what a tap on the pad does, so
+a double knock on a lit reminder snoozes it, just as a double tap would. Holds and long
+presses need the pad.
 
 | Attribute | Values |
 | --- | --- |
-| `event_type` | `tap`, `double_tap`, `long_press` |
+| `event_type` | Touch: `tap`, `double_tap`, `long_press`. Knock: `knock`, `double_knock` |
 | `mode` | What was on top when the touch landed: `idle`, `status`, `reminder`, `notify` |
 | `action` | What the lamp did: `toggle_ambient`, `next_scene`, `acknowledge`, `snooze`, `acknowledge_status`, `dismiss_notify`, `undo`, `event_only` (bound to nothing) or `none` (nothing to act on) |
-| `pad` | `0` or `1`, which of the two touch pads |
+| `input` | `touch` or `knock`, which entity it is |
+| `pad` | `0` for the touch pad, `1` for the knock sensor. Kept for automations written before `input` |
 | `occurrence_id` | The reminder the touch acted on, if any |
 | `status_id`, `status_owner` | The status the touch acted on, if any |
 
@@ -129,7 +135,8 @@ and the entity to use.
 | [Play a pattern when something happens](blueprints/automation/pill_pal/notify_when.yaml) | A notify when an entity changes to a state, such as a washing machine finishing | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal-hacs%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Fnotify_when.yaml) |
 | [Show a status while something is true](blueprints/automation/pill_pal/status_while.yaml) | A status while an entity is in a state, such as a door open, cleared when it changes back and checked again after a restart | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal-hacs%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Fstatus_while.yaml) |
 | [Show a sensor on the gauge](blueprints/automation/pill_pal/gauge_from_sensor.yaml) | Fills the lamp in proportion to a sensor between a low and a high mark, such as solar export | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal-hacs%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Fgauge_from_sensor.yaml) |
-| [Do something when the lamp is touched](blueprints/automation/pill_pal/touch_action.yaml) | Runs your actions on a long press, tap or double tap, optionally only while a status or reminder is showing | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal-hacs%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Ftouch_action.yaml) |
+| [Do something when the lamp is touched](blueprints/automation/pill_pal/touch_action.yaml) | Runs your actions on a long press, tap or double tap on the touch pad, optionally only while a status or reminder is showing | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal-hacs%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Ftouch_action.yaml) |
+| [Do something when the lamp is knocked](blueprints/automation/pill_pal/knock_action.yaml) | Runs your actions on a knock or double knock, optionally only while a status or reminder is showing | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal-hacs%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Fknock_action.yaml) |
 
 ## Examples in YAML
 

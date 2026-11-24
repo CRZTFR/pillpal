@@ -1,0 +1,72 @@
+blueprint:
+  name: Pill Pal - do something when the lamp is knocked
+  description: >-
+    Runs actions when someone knocks on the lamp. A knock also does its usual job on the
+    lamp, the same as a tap on the touch pad, such as turning it on or acknowledging a
+    reminder. For a gesture that does nothing on the lamp, use a long press on the touch
+    pad with the touch blueprint instead.
+  domain: automation
+  source_url: https://github.com/CRZTFR/pillpal-hacs/blob/main/blueprints/automation/pill_pal/knock_action.yaml
+  input:
+    knock:
+      name: The lamp's Knock entity
+      selector:
+        entity:
+          integration: pill_pal
+          domain: event
+    gesture:
+      name: Gesture
+      default: double_knock
+      selector:
+        select:
+          options:
+            - label: Knock
+              value: knock
+            - label: Double knock
+              value: double_knock
+    when:
+      name: Only when the lamp is showing
+      default: any
+      selector:
+        select:
+          options:
+            - label: Anything
+              value: any
+            - label: Nothing in particular
+              value: idle
+            - label: A status
+              value: status
+            - label: A reminder
+              value: reminder
+            - label: A pattern
+              value: notify
+    actions:
+      name: Actions
+      selector:
+        action: {}
+
+mode: queued
+max: 10
+
+variables:
+  gesture: !input gesture
+  when: !input when
+
+triggers:
+  - trigger: state
+    entity_id: !input knock
+
+conditions:
+  # A knock changes the entity's time. Coming back after a restart or dropout is not
+  # a knock.
+  - condition: template
+    value_template: >-
+      {{ trigger.from_state is not none
+         and trigger.from_state.state != 'unavailable'
+         and trigger.to_state.state not in ['unavailable', 'unknown'] }}
+  - condition: template
+    value_template: "{{ trigger.to_state.attributes.event_type == gesture }}"
+  - condition: template
+    value_template: "{{ when == 'any' or trigger.to_state.attributes.mode == when }}"
+
+actions: !input actions

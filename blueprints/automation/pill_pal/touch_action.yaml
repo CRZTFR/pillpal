@@ -1,7 +1,7 @@
 blueprint:
   name: Pill Pal - do something when the lamp is touched
   description: >-
-    Runs actions when someone touches the lamp. A long press does nothing on the lamp
+    Runs actions when someone touches the lamp's touch pad. A long press does nothing on the lamp
     itself, so it is the gesture to use. A tap or double tap still does its usual job
     on the lamp as well, such as turning it on or acknowledging a reminder.
   domain: automation

@@ -172,6 +172,65 @@ async def test_a_touch_becomes_an_event(hass: HomeAssistant, entry, lamp) -> Non
     assert event.attributes["action"] == "event_only"
 
 
+async def test_a_knock_is_its_own_event(hass: HomeAssistant, entry) -> None:
+    knocking = {**SNAPSHOT, "capabilities": {"touch": True, "knock": True}}
+    with (
+        patch("custom_components.pill_pal.api.PillPalClient.state", AsyncMock(return_value=knocking)),
+        patch("custom_components.pill_pal.api.PillPalClient.command", AsyncMock()),
+        patch("custom_components.pill_pal.coordinator.PillPalStream.start"),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+        assert hass.states.get("event.pill_pal_knock").state == "unknown"
+
+        async_dispatcher_send(
+            hass,
+            SIGNAL_TOUCH.format(device_id=DEVICE),
+            {"gesture": "double_tap", "pad": 1, "input": "knock", "mode": "reminder",
+             "target": {"kind": "occurrence", "id": 3}, "action": "snooze"},
+        )
+        await hass.async_block_till_done()
+        knock = hass.states.get("event.pill_pal_knock")
+        assert knock.attributes["event_type"] == "double_knock"
+        assert knock.attributes["input"] == "knock"
+        assert knock.attributes["occurrence_id"] == 3
+        assert knock.attributes["action"] == "snooze"
+        # The touch entity heard nothing.
+        assert hass.states.get("event.pill_pal_touch").state == "unknown"
+
+        # A touch on the pad goes to the touch entity only.
+        knocked_at = knock.state
+        async_dispatcher_send(
+            hass,
+            SIGNAL_TOUCH.format(device_id=DEVICE),
+            {"gesture": "tap", "pad": 0, "input": "touch", "mode": "idle",
+             "target": None, "action": "toggle_ambient"},
+        )
+        await hass.async_block_till_done()
+        touch = hass.states.get("event.pill_pal_touch")
+        assert touch.attributes["event_type"] == "tap"
+        assert touch.attributes["input"] == "touch"
+        assert hass.states.get("event.pill_pal_knock").state == knocked_at
+
+        # A knock never holds; a long press claiming to be one is ignored.
+        async_dispatcher_send(
+            hass,
+            SIGNAL_TOUCH.format(device_id=DEVICE),
+            {"gesture": "long_press", "pad": 1, "input": "knock", "mode": "idle",
+             "target": None, "action": "event_only"},
+        )
+        await hass.async_block_till_done()
+        assert hass.states.get("event.pill_pal_knock").state == knocked_at
+
+
+async def test_knock_unavailable_without_a_working_sensor(hass: HomeAssistant, entry, lamp) -> None:
+    # SNAPSHOT has no capabilities.knock: the sensor is missing or did not start.
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert hass.states.get("event.pill_pal_knock").state == "unavailable"
+    assert hass.states.get("event.pill_pal_touch").state != "unavailable"
+
+
 async def test_actions_reach_the_lamp(hass: HomeAssistant, entry, lamp) -> None:
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
