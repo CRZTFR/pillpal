@@ -67,17 +67,6 @@
             }
           }
         }
-      },
-      "knock": {
-        "name": "Knock",
-        "state_attributes": {
-          "event_type": {
-            "state": {
-              "knock": "Knock",
-              "double_knock": "Double knock"
-            }
-          }
-        }
       }
     },
     "binary_sensor": {

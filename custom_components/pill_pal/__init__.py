@@ -19,6 +19,7 @@ from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.typing import ConfigType
 
@@ -64,6 +65,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: PillPalConfigEntry) -> b
     await coordinator.async_config_entry_first_refresh()
     stream = PillPalStream(hass, coordinator, entry)
     entry.runtime_data = PillPalData(client=client, coordinator=coordinator, stream=stream)
+
+    # The lamp no longer has a knock sensor. Remove the Knock entity that 0.3.0 created,
+    # rather than leave it unavailable for good.
+    registry = er.async_get(hass)
+    if knock := registry.async_get_entity_id("event", DOMAIN, f"{entry.data[CONF_DEVICE_ID]}_knock"):
+        registry.async_remove(knock)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     stream.start()
