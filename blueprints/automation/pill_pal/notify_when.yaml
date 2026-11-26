@@ -5,7 +5,7 @@ blueprint:
     when the washing machine finishes. The lamp goes back to what it was showing
     afterwards, and a touch stops the pattern early.
   domain: automation
-  source_url: https://github.com/CRZTFR/pillpal-hacs/blob/main/blueprints/automation/pill_pal/notify_when.yaml
+  source_url: https://github.com/CRZTFR/pillpal/blob/main/blueprints/automation/pill_pal/notify_when.yaml
   input:
     lamp:
       name: Lamp

@@ -11,7 +11,7 @@ delete them, and the lamp refuses it if asked.
 
 | Part | Version |
 | --- | --- |
-| This integration | 0.2.0 |
+| This integration | 0.4.0 |
 | Home Assistant | 2026.2.3 |
 | Lamp firmware | 2026.09.30.3 |
 
@@ -27,9 +27,9 @@ than the one above have not been tried.
 
 ## Install
 
-[![Open this repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CRZTFR&repository=pillpal-hacs&category=integration)
+[![Open this repository in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=CRZTFR&repository=pillpal&category=integration)
 
-1. In HACS, add `https://github.com/CRZTFR/pillpal-hacs` as a custom repository of type
+1. In HACS, add `https://github.com/CRZTFR/pillpal` as a custom repository of type
    Integration, then install Pill Pal. The button above does this for you.
 2. Restart Home Assistant.
 3. Home Assistant finds the lamp on its own and offers it under Settings > Devices &
@@ -52,7 +52,7 @@ the first lamp; a second lamp gets `_2` on the end.
 | Entity | What it does |
 | --- | --- |
 | Ambient light (`light.pill_pal_ambient_light`) | On, off, brightness, colour, and the built-in scenes as effects |
-| Touch (`event.pill_pal_touch`) | An event for every tap, double tap and long press on the lamp's touch pad, with what the lamp was showing and what it did |
+| Touch (`event.pill_pal_touch`) | An event for every tap, double tap and long press on the touch pad on top of the lamp, with what the lamp was showing and what it did |
 | Next reminder (`sensor.pill_pal_next_reminder`) | When the next reminder is due |
 | Reminders showing (`sensor.pill_pal_reminders_showing`) | How many reminders are signalling now, listed in its attributes |
 | Statuses (`sensor.pill_pal_statuses`) | How many statuses are set, listed in its attributes with who set each one |
@@ -125,10 +125,10 @@ and the entity to use.
 
 | Blueprint | What it does | Import |
 | --- | --- | --- |
-| [Play a pattern when something happens](blueprints/automation/pill_pal/notify_when.yaml) | A notify when an entity changes to a state, such as a washing machine finishing | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal-hacs%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Fnotify_when.yaml) |
-| [Show a status while something is true](blueprints/automation/pill_pal/status_while.yaml) | A status while an entity is in a state, such as a door open, cleared when it changes back and checked again after a restart | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal-hacs%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Fstatus_while.yaml) |
-| [Show a sensor on the gauge](blueprints/automation/pill_pal/gauge_from_sensor.yaml) | Fills the lamp in proportion to a sensor between a low and a high mark, such as solar export | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal-hacs%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Fgauge_from_sensor.yaml) |
-| [Do something when the lamp is touched](blueprints/automation/pill_pal/touch_action.yaml) | Runs your actions on a long press, tap or double tap on the touch pad, optionally only while a status or reminder is showing | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal-hacs%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Ftouch_action.yaml) |
+| [Play a pattern when something happens](blueprints/automation/pill_pal/notify_when.yaml) | A notify when an entity changes to a state, such as a washing machine finishing | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Fnotify_when.yaml) |
+| [Show a status while something is true](blueprints/automation/pill_pal/status_while.yaml) | A status while an entity is in a state, such as a door open, cleared when it changes back and checked again after a restart | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Fstatus_while.yaml) |
+| [Show a sensor on the gauge](blueprints/automation/pill_pal/gauge_from_sensor.yaml) | Fills the lamp in proportion to a sensor between a low and a high mark, such as solar export | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Fgauge_from_sensor.yaml) |
+| [Do something when the lamp is touched](blueprints/automation/pill_pal/touch_action.yaml) | Runs your actions on a long press, tap or double tap, optionally only while a status or reminder is showing | [![Import](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FCRZTFR%2Fpillpal%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fpill_pal%2Ftouch_action.yaml) |
 
 ## Examples in YAML
 

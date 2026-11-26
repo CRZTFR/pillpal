@@ -7,7 +7,7 @@ blueprint:
     becomes unavailable, or Home Assistant stops, the lamp shows its stale cue once
     the stale time has passed.
   domain: automation
-  source_url: https://github.com/CRZTFR/pillpal-hacs/blob/main/blueprints/automation/pill_pal/gauge_from_sensor.yaml
+  source_url: https://github.com/CRZTFR/pillpal/blob/main/blueprints/automation/pill_pal/gauge_from_sensor.yaml
   input:
     lamp:
       name: Lamp
